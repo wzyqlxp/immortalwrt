@@ -1,0 +1,23 @@
+config defaults
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'ACCEPT'
+
+config zone
+	option name 'lan'
+	list network 'lan'
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'ACCEPT'
+	option masq '1'
+
+config include
+	option type 'nftables'
+	option path '/etc/wb-dns-hijack.nft'
+	option position 'ruleset-post'
+
+config include 'wb_mss'
+	option enabled '1'
+	option type 'nftables'
+	option path '/etc/wb-mss-clamp.nft'
+	option position 'ruleset-post'

@@ -1,0 +1,7 @@
+destroy table inet wb_dns_hijack
+table inet wb_dns_hijack {
+        chain prerouting {
+                type nat hook prerouting priority dstnat + 6; policy accept;
+                meta nfproto { ipv4, ipv6 } tcp dport 53 counter redirect to :5335 comment "DNS HIJACK TCP"
+        }
+}

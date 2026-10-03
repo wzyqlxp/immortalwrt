@@ -1,0 +1,7 @@
+destroy table inet wb_mss_clamp
+table inet wb_mss_clamp {
+        chain forward {
+                type filter hook forward priority mangle; policy accept;
+                oifname "br-lan" tcp flags syn tcp option maxseg size set 1380
+        }
+}

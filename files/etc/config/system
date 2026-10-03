@@ -1,0 +1,16 @@
+config system
+	option hostname 'OpenWrt'
+	option timezone 'CST-8'
+	option zonename 'Asia/Shanghai'
+	option ttylogin '0'
+	option log_size '128'
+	option urandom_seed '0'
+	option zram_comp_algo 'lzo-rle'
+	option cronloglevel '9'
+
+config timeserver 'ntp'
+	option enabled '1'
+	option enable_server '0'
+	list server 'ntp.aliyun.com'
+	list server 'cn.ntp.org.cn'
+	list server 'ntp.ntsc.ac.cn'

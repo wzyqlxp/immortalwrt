@@ -1,0 +1,31 @@
+#!/bin/sh
+# 旁路网关网络配置：单网卡 eth0 桥接 br-lan，静态 IP，指向上游 10.220.78.1
+
+uci -q delete network.wan
+uci -q delete network.wan6
+uci -q delete network.lan.ip6assign
+uci -q delete network.globals
+uci set network.globals='globals'
+uci set network.globals.packet_steering='2'
+uci set network.globals.steering_flows='128'
+
+# br-lan 桥
+br=$(uci add network device)
+uci set network.$br.name='br-lan'
+uci set network.$br.type='bridge'
+uci add_list network.$br.ports='eth0'
+
+# eth0 开启 GRO
+eth=$(uci add network device)
+uci set network.$eth.name='eth0'
+uci set network.$eth.gro='1'
+
+uci set network.lan.proto='static'
+uci set network.lan.device='br-lan'
+uci set network.lan.ipaddr='10.220.78.2/24'
+uci set network.lan.gateway='10.220.78.1'
+uci set network.lan.dns='127.0.0.1 119.29.29.29'
+uci set network.lan.multipath='off'
+
+uci commit network
+exit 0
