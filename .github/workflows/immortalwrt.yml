@@ -91,6 +91,12 @@ jobs:
         working-directory: ./openwrt/bin/targets/x86/64
         run: |
           rm -rf packages *.json *.buildinfo *.manifest *.config sha256sums *rootfs.tar.gz
+          # 给所有产物加日期前缀：immortalwrt-x86-64-generic-XXX -> ImmortalWrt-x86_64-YYYY.MM.DD-XXX
+          for f in immortalwrt-*; do
+            newname="ImmortalWrt-x86_64-${date}-${f#immortalwrt-x86-64-generic-}"
+            mv "$f" "$newname"
+          done
+          ls -lh
           echo "FIRMWARE=$PWD" >> $GITHUB_ENV
 
       - name: Upload artifact
@@ -107,3 +113,69 @@ jobs:
           tag_name: ${{ env.date }}
           name: ImmortalWrt x86_64 ${{ env.date }}
           files: ${{ env.FIRMWARE }}/*
+          body: |
+            ## 简介
+
+            基于 [ImmortalWrt](https://github.com/immortalwrt/immortalwrt) `openwrt-24.10` 自动编译的 x86_64 旁路网关固件，构建日期 **${{ env.date }}**。
+
+            **定位**：单臂/旁路网关，单网卡桥接旁挂主路由，只负责代理分流与 DNS，不承担拨号 / DHCP。
+
+            **默认参数**：
+            - 管理地址：`http://10.220.78.2`
+            - 用户名：`root`，密码：`password`（首次登录后请立即修改）
+            - 上游网关：`10.220.78.1`
+            - 根分区大小：1 GB
+
+            **已集成**：OpenClash（Clash Meta 核心）、mosdns（DNS 分流 :5335）、UnblockNeteaseMusic、vlmcsd（KMS :1688）、miniupnpd（UPnP）、Argon 主题、zram 内存压缩交换。
+
+            > ⚠️ OpenClash 订阅链接属私密信息，**未内置**。刷机后请在「服务 → OpenClash → 配置文件订阅」手动添加订阅并启动。
+
+            ---
+
+            ## 镜像文件说明
+
+            文件命名规则：`ImmortalWrt-x86_64-<日期>-<类型>.<后缀>`，下表用 `*` 代指日期前缀。
+
+            ### 🟢 squashfs（推荐）
+
+            只读 rootfs，断电不丢配置，支持 LuCI 内「备份 / 刷写固件」在线升级。**日常使用选这一组。**
+
+            | 文件 | 引导方式 | 用途 |
+            |---|---|---|
+            | `*-squashfs-combined.img.gz` | BIOS/CSM | 物理机 / KVM / Proxmox 用 `dd` 或 Rufus 整盘写盘，老机器 BIOS 启动 |
+            | `*-squashfs-combined-efi.img.gz` | UEFI | 同上，新机器 UEFI 启动 |
+            | `*-squashfs-combined.vmdk` | BIOS | VMware Workstation / VirtualBox 直接「使用现有虚拟磁盘」新建虚拟机 |
+            | `*-squashfs-combined-efi.vmdk` | UEFI | 同上，UEFI 固件虚拟机 |
+            | `*-squashfs-rootfs.img.gz` | — | 单独 rootfs 镜像，用于已有 boot 分区的救援 / 重刷 rootfs |
+
+            ### 🟡 ext4（可选）
+
+            可写文件系统，分区可扩容，适合需要大量自定义写入或折腾的场景。
+
+            | 文件 | 引导方式 | 用途 |
+            |---|---|---|
+            | `*-ext4-combined.img.gz` | BIOS/CSM | `dd` / Rufus 整盘写盘 |
+            | `*-ext4-combined-efi.img.gz` | UEFI | 同上，UEFI 启动 |
+            | `*-ext4-combined.vmdk.gz` | BIOS | VMware 直接挂载（gzip 压缩，需先解压） |
+            | `*-ext4-combined-efi.vmdk.gz` | UEFI | 同上，UEFI 虚拟机 |
+            | `*-ext4-rootfs.img.gz` | — | 单独 ext4 rootfs |
+
+            ### ⚪ 其他
+
+            | 文件 | 用途 |
+            |---|---|
+            | `*-kernel.bin` | 单独内核镜像，PXE / 网络引导或开发调试用，普通用户无需下载 |
+
+            ---
+
+            ## 刷写方式速查
+
+            - **物理机**：用 [Rufus](https://rufus.ie/)（DD 模式）或 `gunzip -c xxx.img.gz | dd of=/dev/sdX bs=4M` 整盘写入。
+            - **KVM / Proxmox**：`qm importdisk <vmid> <解压后的.img> local-lvm` 后挂为硬盘，磁盘类型选 SATA / VirtIO。
+            - **VMware**：新建虚拟机 → 磁盘选「使用现有虚拟磁盘」→ 指向 `.vmdk`。
+            - **VirtualBox**：`.vmdk` 可直接注册；`.img.gz` 先解压再用 `VBoxManage convertfromraw` 转格式。
+            - **升级**：LuCI → 系统 → 备份/升级，直接刷 `*-squashfs-combined*.img.gz` 即可保留配置。
+
+            ---
+
+            本固件由 GitHub Actions 每日自动构建，如需自定义请 [Fork 本仓库](https://github.com/wzyqlxp/immortalwrt/fork) 修改 `immortalwrt/x86_64/defconfig` 后自行编译。
